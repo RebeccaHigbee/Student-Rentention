@@ -1,0 +1,293 @@
+# Rebecca Higbee
+
+# This code uses example data of student information in Utah State University's 
+# Registrar's office. No sensitive or identifying information has been included. 
+
+# TASK: Create visualizations that shows the factors that contribute to student
+# retention at Utah State University with insights from the visualizations.
+
+# Install needed packages and libraries
+install.packages(c("readxl", "ggplot2", "tidyverse", "lintr", "styler"))
+library(readxl)
+library(ggplot2)
+library(tidyverse)
+library(lintr)
+library(styler)
+
+# Load the data
+data <- read_xlsx("Example_Retention_Dataset.xlsx")
+
+################################################################################
+# Proportion of Registered vs. Not Registered Students by GPA
+
+# Filter out rows with NA values in the OVERALL_GPA_RANGE
+# and REGISTERED_STATUS_IN_FALL_2023 columns
+data_filtered <- data |>
+  filter(!is.na(OVERALL_GPA_RANGE) & !is.na(REGISTERED_STATUS_IN_FALL_2023))
+
+# Reorder the levels of OVERALL_GPA_RANGE
+data_filtered$OVERALL_GPA_RANGE <-
+  factor(data_filtered$OVERALL_GPA_RANGE,
+    levels = c(
+      "Below 1.00", "1.00-1.99", "2.00-2.49", "2.50-2.99",
+      "3.00-3.49", "3.50-4.00"
+    )
+  )
+
+# Create the stacked bar chart with the "Set1" ColorBrewer palette
+ggplot(
+  data_filtered,
+  aes(x = OVERALL_GPA_RANGE, fill = REGISTERED_STATUS_IN_FALL_2023)
+) +
+  geom_bar(position = "stack") +
+  labs(
+    title = "Student Registration Status by GPA",
+    x = "GPA Range",
+    y = "Count",
+    fill = "Registered for Next Semester"
+  ) +
+  scale_fill_brewer(palette = "Set1") # Use the "Set1" ColorBrewer palette
+
+data_proportion <- data_filtered |>
+  group_by(OVERALL_GPA_RANGE, REGISTERED_STATUS_IN_FALL_2023) |>
+  summarize(Count = n()) |>
+  ungroup() |>
+  group_by(OVERALL_GPA_RANGE) |>
+  mutate(Proportion = Count / sum(Count))
+
+# Create the stacked bar chart with the "Set1" ColorBrewer palette
+ggplot(
+  data_proportion,
+  aes(
+    x = OVERALL_GPA_RANGE, y = Proportion,
+    fill = REGISTERED_STATUS_IN_FALL_2023
+  )
+) +
+  geom_bar(stat = "identity") +
+  labs(
+    title = "Proportion of Registered vs. Not Registered Students by GPA",
+    x = "GPA Range",
+    y = "Proportion",
+    fill = "Registered for Next Semester"
+  ) +
+  scale_y_continuous(labels = scales::percent_format(scale = 1)) +
+  scale_fill_brewer(palette = "Set1") # ColorBrewer palette for colorblindness
+
+################################################################################
+# Proportion of Registered vs. Not Registered Students by Academic Standing
+data_filtered <- data |>
+  filter(!is.na(ACADEMIC_STANDING) & !is.na(REGISTERED_STATUS_IN_FALL_2023))
+
+# Calculate the proportion of registered and not registered students
+# for each ACADEMIC_STANDING category
+data_proportion <- data_filtered |>
+  group_by(ACADEMIC_STANDING, REGISTERED_STATUS_IN_FALL_2023) |>
+  summarize(Count = n()) |>
+  ungroup() |>
+  group_by(ACADEMIC_STANDING) |>
+  mutate(Proportion = Count / sum(Count))
+
+# Remove NA values from ACADEMIC_STANDING in the order vector
+order <- data_proportion |>
+  filter(REGISTERED_STATUS_IN_FALL_2023 == "Registered") |>
+  arrange(Proportion) |>
+  pull(ACADEMIC_STANDING)
+
+data_proportion$ACADEMIC_STANDING <- factor(data_proportion$ACADEMIC_STANDING,
+  levels = order
+)
+
+# Define custom labels for ACADEMIC_STANDING categories
+custom_labels <- c(
+  "Warning" = "Academic Warning",
+  "Probation" = "Academic Probation",
+  "Sem Warning" = "Semester Warning",
+  "Good Skktanding" = "Good Standing",
+  "Other" = "NA"
+)
+
+# Create the stacked bar chart
+ggplot(data_proportion, aes(
+  x = ACADEMIC_STANDING, y = Proportion,
+  fill = REGISTERED_STATUS_IN_FALL_2023
+)) +
+  geom_bar(stat = "identity") +
+  labs(
+    title = 
+      "Proportion of Registered vs. Not Registered Students by 
+    Academic Standing",
+    x = "Academic Standing",
+    y = "Proportion",
+    fill = "Registered for Next Semester"
+  ) +
+  scale_y_continuous(labels = scales::percent_format(scale = 1)) +
+  scale_fill_brewer(palette = "Set1") +
+  scale_x_discrete(labels = custom_labels)
+
+
+################################################################################
+# Proportion of Registered vs. Not Registered Students by Cohort Type
+data_filtered <- data |>
+  filter(!is.na(COHORT_STUDENT_TYPE) & !is.na(REGISTERED_STATUS_IN_FALL_2023))
+
+# Calculate the proportion of registered and not registered students
+# for each COHORT_STUDENT_TYPE
+data_proportion <- data_filtered |>
+  group_by(COHORT_STUDENT_TYPE, REGISTERED_STATUS_IN_FALL_2023) |>
+  summarize(Count = n()) |>
+  ungroup() |>
+  group_by(COHORT_STUDENT_TYPE) |>
+  mutate(Proportion = Count / sum(Count))
+
+# Create the stacked bar chart
+ggplot(data_proportion, aes(
+  x = COHORT_STUDENT_TYPE, y = Proportion,
+  fill = REGISTERED_STATUS_IN_FALL_2023
+)) +
+  geom_bar(stat = "identity") +
+  labs(
+    title =
+      "Proportion of Registered vs. Not Registered Students by Cohort Type",
+    x = "COHORT_STUDENT_TYPE",
+    y = "Proportion",
+    fill = "Registered for Next Semester"
+  ) +
+  scale_y_continuous(labels = scales::percent_format(scale = 1)) +
+  scale_fill_brewer(palette = "Set1")
+
+################################################################################
+# Proportion of registered and not registered students by Underrepresented Race
+data_filtered <- data |>
+  filter(!is.na(UNDERREPRESENTED_RACE) & !is.na(REGISTERED_STATUS_IN_FALL_2023))
+
+# Calculate the proportion of registered and not registered students
+# for each UNDERREPRESENTED_RACE
+data_proportion <- data_filtered |>
+  group_by(UNDERREPRESENTED_RACE, REGISTERED_STATUS_IN_FALL_2023) |>
+  summarize(Count = n()) |>
+  ungroup() |>
+  group_by(UNDERREPRESENTED_RACE) |>
+  mutate(Proportion = Count / sum(Count))
+
+# Create the stacked bar chart
+ggplot(data_proportion, aes(
+  x = UNDERREPRESENTED_RACE, y = Proportion,
+  fill = REGISTERED_STATUS_IN_FALL_2023
+)) +
+  geom_bar(stat = "identity") +
+  labs(
+    title = 
+      "Proportion of Registered vs. Not Registered Students by 
+    Underrepresented Race",
+    x = "UNDERREPRESENTED_RACE",
+    y = "Proportion",
+    fill = "Registered for Next Semester"
+  ) +
+  scale_y_continuous(labels = scales::percent_format(scale = 1)) +
+  scale_fill_brewer(palette = "Set1")
+
+################################################################################
+# Proportion of Registered vs. Not Registered Students by Honors Status
+data_filtered <- data |>
+  filter(!is.na(HONORS_STUDENT) & !is.na(REGISTERED_STATUS_IN_FALL_2023))
+
+# Replace original values with "Yes" and "No" in the HONORS_STUDENT column
+data_filtered$HONORS_STUDENT <-
+  ifelse(data_filtered$HONORS_STUDENT == "Y", "Yes", "No")
+
+# Calculate the proportion of registered and not registered students
+# for each HONORS_STUDENT category
+data_proportion <- data_filtered |>
+  group_by(HONORS_STUDENT, REGISTERED_STATUS_IN_FALL_2023) |>
+  summarize(Count = n()) |>
+  ungroup() |>
+  group_by(HONORS_STUDENT) |>
+  mutate(Proportion = Count / sum(Count))
+
+# Create the stacked bar chart with the "ColorBrewer" color palette
+ggplot(
+  data_proportion,
+  aes(
+    x = HONORS_STUDENT, y = Proportion,
+    fill = REGISTERED_STATUS_IN_FALL_2023
+  )
+) +
+  geom_bar(stat = "identity") +
+  labs(
+    title = "Proportion of Registered vs. Not Registered Students by Honors",
+    x = "HONORS_STUDENT",
+    y = "Proportion",
+    fill = "Registered for Next Semester"
+  ) +
+  scale_fill_brewer(palette = "Set1") +
+  scale_y_continuous(labels = scales::percent_format(scale = 1))
+
+################################################################################
+# Proportion of Registered vs. Not Registered Students by HS GPA
+data_filtered <- data |>
+  filter(!is.na(HS_GPA_RANGE) & !is.na(REGISTERED_STATUS_IN_FALL_2023))
+
+# Calculate the proportion of registered and not registered students
+# for each HS_GPA_RANGE category
+data_proportion <- data_filtered |>
+  group_by(HS_GPA_RANGE, REGISTERED_STATUS_IN_FALL_2023) |>
+  summarize(Count = n()) |>
+  ungroup() |>
+  group_by(HS_GPA_RANGE) |>
+  mutate(Proportion = Count / sum(Count))
+
+# Create the stacked bar chart
+ggplot(data_proportion, aes(
+  x = HS_GPA_RANGE, y = Proportion,
+  fill = REGISTERED_STATUS_IN_FALL_2023
+)) +
+  geom_bar(stat = "identity") +
+  labs(
+    title = "Proportion of Registered vs. Not Registered Students by HS GPA",
+    x = "HS GPA RANGE",
+    y = "Proportion",
+    fill = "Registered for Next Semester"
+  ) +
+  scale_y_continuous(labels = scales::percent_format(scale = 1)) +
+  scale_fill_brewer(palette = "Set1")
+
+################################################################################
+data_filtered <- data |>
+  filter(!is.na(CLASS_LEVEL) & !is.na(REGISTERED_STATUS_IN_FALL_2023))
+
+# Define the order of CLASS_LEVEL categories
+class_level_order <- c("FR", "SO", "JR", "SR")
+
+# Create a new factor variable with the ordered levels
+data_filtered$CLASS_LEVEL <- factor(data_filtered$CLASS_LEVEL,
+  levels = class_level_order
+)
+
+# Define labels for the class levels
+class_level_labels <-
+  c("FR" = "Freshman", "SO" = "Sophomore", "JR" = "Junior", "SR" = "Senior")
+
+# Calculate the proportion of registered and not registered students for each
+# CLASS_LEVEL category
+data_proportion <- data_filtered |>
+  group_by(CLASS_LEVEL, REGISTERED_STATUS_IN_FALL_2023) |>
+  summarize(Count = n()) |>
+  ungroup() |>
+  group_by(CLASS_LEVEL) |>
+  mutate(Proportion = Count / sum(Count))
+
+# Create the stacked bar chart with spelled out class level labels
+ggplot(data_proportion, aes(
+  x = CLASS_LEVEL, y = Proportion,
+  fill = REGISTERED_STATUS_IN_FALL_2023
+)) +
+  geom_bar(stat = "identity") +
+  labs(
+    title = "Proportion of Registered vs. Not Registered Students by Class",
+    x = "CLASS_LEVEL",
+    y = "Proportion",
+    fill = "Registered for Next Semester"
+  ) +
+  scale_y_continuous(labels = scales::percent_format(scale = 1)) +
+  scale_fill_brewer(palette = "Set1") +
+  scale_x_discrete(labels = class_level_labels)
