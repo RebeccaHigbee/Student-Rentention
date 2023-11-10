@@ -1,0 +1,83 @@
+--#1: How many students are registered each term in Spring 2023 and Fall 2023?
+
+--Naming the CTE “small registration dataframe”
+WITH reg_small_df  AS
+
+--Each row is a unique combination of anumber, term, and reg_status from the Registration table
+(SELECT DISTINCT r.anumber, r.term, r.reg_status
+FROM Registration_tbl r
+--Filtered by students under the registered status
+WHERE r.reg_status = “Reg”
+--Filtered by students not in Summer 2023, leaving Spring 2023 and Fall 2023
+AND r.term != “Summer 2023”)
+
+--From the registration small dataframe, count by term
+SELECT *, COUNT(term)
+FROM reg_small_df
+--Group the counts by term
+GROUP BY term;
+
+
+
+--#2: Provide a list of students with their email addresses who are registered for Spring 2023.
+--Exclude any students who have a FERPA Confidentiality Block.
+
+--Naming the CTE “small student dataframe”
+WITH student_small_df AS
+
+--Selecting all necessary columns from the Student and Registration tables
+(SELECT s.anumber, s.last_name, s.first_name, s.email, s.ferpa_confid_block,
+r.anumber, r.term, r.reg_status
+--Left join Registration onto Student using student Anumbers
+FROM Student_tbl s
+LEFT JOIN Registration_tbl r ON s.anumber = r.anumber
+--Filter by Spring 2023 registration term and no FERPA block (denoted by the !=)
+WHERE r.term = “Spring 2023” AND ferpa_confid_block != “Y”)
+
+--From the student small dataframe, display student full names and respective emails
+SELECT last_name, first_name, email
+FROM student_small_df;
+
+
+
+--#3: Provide an email list of students who are registered for an English (ENGL) class.
+
+--Naming the CTE “small course dataframe”
+WITH course_small_df AS
+
+--Selecting all necessary columns from the Course, Registration, and Student tables
+(SELECT c.crn, c.subject, r.anumber, r.crn, r.reg_status, s.anumber, s.email
+--Left join Registration onto Course using crn identification
+FROM Course_tbl c
+LEFT JOIN Registration_tbl r ON c.crn = r.crn
+--Left join Student onto Registration using student anumbers
+LEFT JOIN Student_tbl s ON r.anumber = s.anumber
+--Filter by registered students in an English course
+WHERE c.subject = “ENGL” AND r.reg_status = “Reg”)
+
+--From course small dataframe, display only emails in the final output
+SELECT email
+FROM course_small_df;
+
+
+
+--#4: Provide a list of students who are registered Fall 2023 and indicate if the students 
+--have applied to graduate Fall 2023.
+
+--Naming the CTE “small graduation application dataframe”
+WITH grad_small_df AS
+
+--Selecting all necessary columns from the Grad, Registration, and Student tables
+(SELECT g.anumber, g.term, r.anumber, r.term, r.reg_status, s.anumber, s.last_name, s.first_name
+--Left join Registration onto Grad using student anumbers
+FROM Grad_app_tbl g
+LEFT JOIN Registration_tbl r ON g.anumber = r.anumber
+--Left join Student onto Registration using student anumbers
+LEFT JOIN Student_tbl s ON r.anumber = s.anumber
+--Filter by registered Fall 2023 students with graduation applications for Fall 2023
+WHERE g.term = “Fall 2023” AND r.term = “Fall 2023” AND r.reg_status = “Reg”)
+
+--From the small graduation application dataframe, display only student full names
+SELECT last_name, first_name
+FROM grad_small_df;
+
